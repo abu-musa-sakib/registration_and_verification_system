@@ -1,0 +1,31 @@
+name: registration_and_verification_system
+description: "A Flutter project for a registration and verification system."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_face_api: ^6.1.2
+  image_picker: ^1.1.1
+  uuid: ^4.4.0
+  google_mlkit_face_detection: ^0.9.0
+  path: ^1.8.3
+  sqflite: ^2.2.8+4
+  camera: ^0.10.6
+  permission_handler: ^11.3.1
+  sensors_plus: ^5.0.1
+  path_provider: ^2.0.14
+  image: ^4.1.7
+  face_camera: ^0.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
