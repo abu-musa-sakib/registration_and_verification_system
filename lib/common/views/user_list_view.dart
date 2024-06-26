@@ -3,7 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class User {
-  final int id;
+  final String id;
   final String name;
 
   User({required this.id, required this.name});
@@ -29,7 +29,7 @@ class UserDatabase {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('users.db');
+    _database = await _initDB('user_database.db');
     return _database!;
   }
 
@@ -37,12 +37,13 @@ class UserDatabase {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
+    // Open the database file. If it doesn't exist, it will be created.
     return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
   Future _createDB(Database db, int version) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT NOT NULL';
+    const idType = 'TEXT PRIMARY KEY';
+    const textType = 'TEXT';
 
     await db.execute('''
     CREATE TABLE users ( 
@@ -67,7 +68,10 @@ class UserDatabase {
 
     final result = await db.query('users');
 
-    return result.map((json) => User(id: json['id'] as int, name: json['name'] as String)).toList();
+    return result
+        .map(
+            (json) => User(id: json['id'] as String, name: json['name'] as String))
+        .toList();
   }
 
   Future close() async {
@@ -105,43 +109,55 @@ class _UserListViewState extends State<UserListView> {
       appBar: AppBar(
         title: const Text('User List'),
       ),
-      body: FutureBuilder<List<User>>(
-        future: _usersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No users found'));
-          } else {
-            final users = snapshot.data!;
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('ID')),
-                  DataColumn(label: Text('Name')),
-                ],
-                rows: users
-                    .map(
-                      (user) => DataRow(cells: [
-                        DataCell(Text(user.id.toString())),
-                        DataCell(Text(user.name)),
-                      ]),
-                    )
-                    .toList(),
-              ),
-            );
-          }
-        },
+      body: Center(
+        child: FutureBuilder<List<User>>(
+          future: _usersFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No users found'));
+            } else {
+              final users = snapshot.data!;
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('ID')),
+                    DataColumn(label: Text('Name')),
+                  ],
+                  rows: users
+                      .map(
+                        (user) => DataRow(cells: [
+                          DataCell(Text(user.id.toString())),
+                          DataCell(Text(user.name)),
+                        ]),
+                      )
+                      .toList(),
+                  headingRowColor: WidgetStateColor.resolveWith((states) => Colors.blueGrey),
+                  dataRowColor: WidgetStateColor.resolveWith((states) => Colors.grey.shade200),
+                  dataRowMaxHeight: 60,
+                  headingTextStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  columnSpacing: 30,
+                  dividerThickness: 2,
+                  border: TableBorder.all(width: 1.5, color: Colors.grey),
+                ),
+              );
+            }
+          },
+        ),
       ),
     );
   }
 }
 
 void main() {
-  runApp(MaterialApp(
+  runApp(const MaterialApp(
     home: UserListView(),
   ));
 }
