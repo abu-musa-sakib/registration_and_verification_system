@@ -3,8 +3,8 @@ import 'package:registration_and_verification_system/authenticate_face/authentic
 import 'package:registration_and_verification_system/authenticate_face/authenticate_face_view_manual.dart';
 import 'package:registration_and_verification_system/common/utils/extensions/size_extension.dart';
 import 'package:registration_and_verification_system/common/utils/custom_button.dart';
+import 'package:registration_and_verification_system/common/views/check_user_view.dart';
 import 'package:registration_and_verification_system/constants/theme.dart';
-import 'package:registration_and_verification_system/register_face/register_face_view_manual.dart';
 
 class VerificationOptionsView extends StatelessWidget {
   const VerificationOptionsView({
@@ -73,7 +73,7 @@ class VerificationOptionsView extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const RegisterFaceViewManual(),
+                      builder: (context) => const CheckUserView(),
                     ),
                   );
                 },
