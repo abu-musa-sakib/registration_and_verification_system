@@ -1,6 +1,5 @@
 // lib/authenticate_face/authenticate_face_view_auto.dart
 import 'dart:io';
-import 'dart:math';
 
 import 'package:camera/camera.dart';
 import 'package:face_camera/face_camera.dart';
@@ -11,6 +10,7 @@ import 'package:path/path.dart';
 import 'package:registration_and_verification_system/authenticate_face/user_details_view.dart';
 import 'package:registration_and_verification_system/common/utils/classes/SmartFaceCameraWidget.dart';
 import 'package:registration_and_verification_system/common/utils/custom_snackbar.dart';
+import 'package:registration_and_verification_system/common/utils/face_registration_util.dart';
 import 'package:registration_and_verification_system/constants/theme.dart';
 import 'package:registration_and_verification_system/model/user_model.dart';
 import 'package:sqflite/sqflite.dart';
@@ -251,40 +251,6 @@ class _AuthenticateFaceViewAutoState extends State<AuthenticateFaceViewAuto> {
     return allBytes.done().buffer.asUint8List();
   }
 
-  Future<FaceFeatures?> _extractFaceFeatures(Face face) async {
-    // Helper function to get points from face landmarks
-    Points? _getPoints(FaceLandmarkType landmarkType) {
-      final landmark = face.landmarks[landmarkType];
-      if (landmark != null) {
-        debugPrint(
-            "Landmark $landmarkType detected at (${landmark.position.x}, ${landmark.position.y})");
-        return Points(
-          x: landmark.position.x.toInt(),
-          y: landmark.position.y.toInt(),
-        );
-      }
-      debugPrint("Landmark $landmarkType not detected");
-      return null;
-    }
-
-    // Extracting the face features
-    FaceFeatures faceFeatures = FaceFeatures(
-      rightEar: _getPoints(FaceLandmarkType.rightEar),
-      leftEar: _getPoints(FaceLandmarkType.leftEar),
-      rightMouth: _getPoints(FaceLandmarkType.rightMouth),
-      leftMouth: _getPoints(FaceLandmarkType.leftMouth),
-      rightEye: _getPoints(FaceLandmarkType.rightEye),
-      leftEye: _getPoints(FaceLandmarkType.leftEye),
-      rightCheek: _getPoints(FaceLandmarkType.rightCheek),
-      leftCheek: _getPoints(FaceLandmarkType.leftCheek),
-      noseBase: _getPoints(FaceLandmarkType.noseBase),
-      bottomMouth: _getPoints(FaceLandmarkType.bottomMouth),
-    );
-
-    debugPrint("Extracted Face Features: $faceFeatures");
-    return faceFeatures;
-  }
-
   void _showFailureDialog(BuildContext context,
       {required String title, required String description}) {
     showDialog(
@@ -331,7 +297,7 @@ class _AuthenticateFaceViewAutoState extends State<AuthenticateFaceViewAuto> {
 
       // Step 4: Extract face features from the first detected face
       if (faces.isNotEmpty) {
-        return await _extractFaceFeatures(faces.first);
+        return await FaceRegistrationUtil.extractFaceFeatures(faces.first);
       } else {
         // Handle case where no faces are detected
         debugPrint("No faces detected in the captured image.");
@@ -367,6 +333,11 @@ class _AuthenticateFaceViewAutoState extends State<AuthenticateFaceViewAuto> {
         }
       } else {
         setState(() => trialNumber = 1);
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const UserDetailsView(user: null),
+          ),
+        );
         _showFailureDialog(
           context,
           title: "User Not Found",
@@ -390,22 +361,24 @@ class _AuthenticateFaceViewAutoState extends State<AuthenticateFaceViewAuto> {
 
         for (var user in users) {
           final userModel = UserModel.fromJson(user);
-          final similarity =
-              compareFaces(faceFeatures, userModel.faceFeatures!);
+          final similarity = FaceRegistrationUtil.compareFaces(
+              faceFeatures, userModel.faceFeatures!);
           if (similarity >= 0.8 && similarity <= 1.5) {
             filteredUsers.add(userModel);
           }
         }
 
-        filteredUsers.sort((a, b) => compareFaces(faceFeatures, a.faceFeatures!)
-            .compareTo(compareFaces(faceFeatures, b.faceFeatures!)));
+        filteredUsers.sort((a, b) =>
+            FaceRegistrationUtil.compareFaces(faceFeatures, a.faceFeatures!)
+                .compareTo(FaceRegistrationUtil.compareFaces(
+                    faceFeatures, b.faceFeatures!)));
 
         if (filteredUsers.isNotEmpty) {
           final bestMatchUser = filteredUsers.first;
           setState(() {
-            _similarity =
-                compareFaces(faceFeatures, bestMatchUser.faceFeatures!)
-                    .toStringAsFixed(2);
+            _similarity = FaceRegistrationUtil.compareFaces(
+                    faceFeatures, bestMatchUser.faceFeatures!)
+                .toStringAsFixed(2);
             trialNumber = 1;
             _isMatching = false;
           });
@@ -507,12 +480,14 @@ class _AuthenticateFaceViewAutoState extends State<AuthenticateFaceViewAuto> {
 
       if (faces.isNotEmpty) {
         // Extract features from the first detected face
-        FaceFeatures? faceFeatures = await _extractFaceFeatures(faces.first);
+        FaceFeatures? faceFeatures =
+            await FaceRegistrationUtil.extractFaceFeatures(faces.first);
 
         if (faceFeatures != null) {
           for (var user in _registeredUsers) {
             // Face comparing logic
-            final similarity = compareFaces(faceFeatures, user.faceFeatures!);
+            final similarity = FaceRegistrationUtil.compareFaces(
+                faceFeatures, user.faceFeatures!);
 
             setState(() {
               _similarity = similarity.toStringAsFixed(2);
@@ -584,45 +559,6 @@ class _AuthenticateFaceViewAutoState extends State<AuthenticateFaceViewAuto> {
     }
   }
 
-  double compareFaces(FaceFeatures face1, FaceFeatures face2) {
-    double distEar1 = euclideanDistance(face1.rightEar!, face1.leftEar!);
-    double distEar2 = euclideanDistance(face2.rightEar!, face2.leftEar!);
-
-    double ratioEar = distEar1 / distEar2;
-
-    double distEye1 = euclideanDistance(face1.rightEye!, face1.leftEye!);
-    double distEye2 = euclideanDistance(face2.rightEye!, face2.leftEye!);
-
-    double ratioEye = distEye1 / distEye2;
-
-    double distCheek1 = euclideanDistance(face1.rightCheek!, face1.leftCheek!);
-    double distCheek2 = euclideanDistance(face2.rightCheek!, face2.leftCheek!);
-
-    double ratioCheek = distCheek1 / distCheek2;
-
-    double distMouth1 = euclideanDistance(face1.rightMouth!, face1.leftMouth!);
-    double distMouth2 = euclideanDistance(face2.rightMouth!, face2.leftMouth!);
-
-    double ratioMouth = distMouth1 / distMouth2;
-
-    double distNoseToMouth1 =
-        euclideanDistance(face1.noseBase!, face1.bottomMouth!);
-    double distNoseToMouth2 =
-        euclideanDistance(face2.noseBase!, face2.bottomMouth!);
-
-    double ratioNoseToMouth = distNoseToMouth1 / distNoseToMouth2;
-
-    double ratio =
-        (ratioEye + ratioEar + ratioCheek + ratioMouth + ratioNoseToMouth) / 5;
-    debugPrint("Ratio is: $ratio");
-
-    return ratio;
-  }
-
-  double euclideanDistance(Points point1, Points point2) {
-    return sqrt(pow(point1.x - point2.x, 2) + pow(point1.y - point2.y, 2));
-  }
-
   Future<InputImage> convertBytesToInputImage(
       Uint8List bytes,
       int width,
@@ -642,7 +578,7 @@ class _AuthenticateFaceViewAutoState extends State<AuthenticateFaceViewAuto> {
 
   Future<void> _stopCameraAndNavigate(BuildContext context, Face face) async {
     // Fetch the user's face features and navigate
-    final faceFeatures = await _extractFaceFeatures(face);
+    final faceFeatures = await FaceRegistrationUtil.extractFaceFeatures(face);
     if (faceFeatures != null) {
       _fetchUsersAndMatchFace(context, faceFeatures);
     }

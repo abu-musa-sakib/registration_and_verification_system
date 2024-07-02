@@ -3,9 +3,8 @@ import 'dart:io';
 import 'package:face_camera/face_camera.dart';
 import 'package:flutter/material.dart';
 import 'package:registration_and_verification_system/common/utils/classes/SmartFaceCameraWidget.dart';
+import 'package:registration_and_verification_system/common/utils/face_registration_util.dart';
 import 'package:registration_and_verification_system/constants/theme.dart';
-import 'package:registration_and_verification_system/model/user_model.dart';
-import 'package:registration_and_verification_system/register_face/enter_details_view.dart';
 
 class RegisterFaceViewAuto extends StatefulWidget {
   @override
@@ -19,7 +18,6 @@ class _RegisterFaceViewAutoState extends State<RegisterFaceViewAuto> {
   late Size imageSize;
   late int bytesPerRow;
   late File _image = File('');
-  FaceFeatures? _faceFeatures;
   bool _isCameraStopped = false;
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
@@ -38,89 +36,11 @@ class _RegisterFaceViewAutoState extends State<RegisterFaceViewAuto> {
       setState(() {
         _isFaceDetected = true;
       });
-      await _startRegistrationProcess(face);
+      await FaceRegistrationUtil.startRegistrationProcess(
+          context, face, _image);
       setState(() {
         _isFaceDetected = false;
       });
-    }
-  }
-
-  Future<FaceFeatures?> _extractFaceFeatures(Face face) async {
-    // Helper function to get points from face landmarks
-    Points? _getPoints(FaceLandmarkType landmarkType) {
-      final landmark = face.landmarks[landmarkType];
-      if (landmark != null) {
-        debugPrint(
-            "Landmark $landmarkType detected at (${landmark.position.x}, ${landmark.position.y})");
-        return Points(
-          x: landmark.position.x.toInt(),
-          y: landmark.position.y.toInt(),
-        );
-      }
-      debugPrint("Landmark $landmarkType not detected");
-      return null;
-    }
-
-    // Extracting the face features
-    FaceFeatures faceFeatures = FaceFeatures(
-      rightEar: _getPoints(FaceLandmarkType.rightEar),
-      leftEar: _getPoints(FaceLandmarkType.leftEar),
-      rightMouth: _getPoints(FaceLandmarkType.rightMouth),
-      leftMouth: _getPoints(FaceLandmarkType.leftMouth),
-      rightEye: _getPoints(FaceLandmarkType.rightEye),
-      leftEye: _getPoints(FaceLandmarkType.leftEye),
-      rightCheek: _getPoints(FaceLandmarkType.rightCheek),
-      leftCheek: _getPoints(FaceLandmarkType.leftCheek),
-      noseBase: _getPoints(FaceLandmarkType.noseBase),
-      bottomMouth: _getPoints(FaceLandmarkType.bottomMouth),
-    );
-
-    debugPrint("Extracted Face Features: $faceFeatures");
-    return faceFeatures;
-  }
-
-  Future<void> _startRegistrationProcess(Face face) async {
-    // Waiting to extract face features
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-          color: accentColor,
-        ),
-      ),
-    );
-
-    // Extracting face features
-    _faceFeatures = await _extractFaceFeatures(face);
-    setState(() {});
-    if (mounted) Navigator.of(context).pop();
-
-    // Ensure the image is updated
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // Navigate to the details view
-    if (_image != File('') && _faceFeatures != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => EnterDetailsView(
-            image: _image.path,
-            faceFeatures: _faceFeatures!,
-          ),
-        ),
-      );
-    } else if (_image == File('')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please capture an image.'),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to capture image. Please try again.'),
-        ),
-      );
     }
   }
 
@@ -201,7 +121,9 @@ class _RegisterFaceViewAutoState extends State<RegisterFaceViewAuto> {
                                   _isCameraStopped =
                                       true; // This will stop the camera
                                   setState(() {});
-                                  await _startRegistrationProcess(faces.first);
+                                  await FaceRegistrationUtil
+                                      .startRegistrationProcess(
+                                          context, faces.first, _image);
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

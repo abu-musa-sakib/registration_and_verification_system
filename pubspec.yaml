@@ -21,6 +21,8 @@ dependencies:
   path_provider: ^2.0.14
   image: ^4.1.7
   face_camera: ^0.1.0
+  intl: ^0.17.0
+
 
 dev_dependencies:
   flutter_test:

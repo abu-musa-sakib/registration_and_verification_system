@@ -1,11 +1,11 @@
 import 'dart:developer';
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:path/path.dart';
 import 'package:registration_and_verification_system/common/utils/extensions/size_extension.dart';
+import 'package:registration_and_verification_system/common/utils/face_registration_util.dart';
 import 'package:registration_and_verification_system/common/views/camera_view.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:registration_and_verification_system/authenticate_face/scanning_animation/animated_view.dart';
@@ -167,47 +167,6 @@ class _AuthenticateFaceViewManualState
     });
   }
 
-  double compareFaces(FaceFeatures face1, FaceFeatures face2) {
-    double distEar1 = euclideanDistance(face1.rightEar!, face1.leftEar!);
-    double distEar2 = euclideanDistance(face2.rightEar!, face2.leftEar!);
-
-    double ratioEar = distEar1 / distEar2;
-
-    double distEye1 = euclideanDistance(face1.rightEye!, face1.leftEye!);
-    double distEye2 = euclideanDistance(face2.rightEye!, face2.leftEye!);
-
-    double ratioEye = distEye1 / distEye2;
-
-    double distCheek1 = euclideanDistance(face1.rightCheek!, face1.leftCheek!);
-    double distCheek2 = euclideanDistance(face2.rightCheek!, face2.leftCheek!);
-
-    double ratioCheek = distCheek1 / distCheek2;
-
-    double distMouth1 = euclideanDistance(face1.rightMouth!, face1.leftMouth!);
-    double distMouth2 = euclideanDistance(face2.rightMouth!, face2.leftMouth!);
-
-    double ratioMouth = distMouth1 / distMouth2;
-
-    double distNoseToMouth1 =
-        euclideanDistance(face1.noseBase!, face1.bottomMouth!);
-    double distNoseToMouth2 =
-        euclideanDistance(face2.noseBase!, face2.bottomMouth!);
-
-    double ratioNoseToMouth = distNoseToMouth1 / distNoseToMouth2;
-
-    double ratio =
-        (ratioEye + ratioEar + ratioCheek + ratioMouth + ratioNoseToMouth) / 5;
-    log(ratio.toString(), name: "Ratio");
-
-    return ratio;
-  }
-
-  double euclideanDistance(Points p1, Points p2) {
-    final sqr =
-        math.sqrt(math.pow((p1.x - p2.x), 2) + math.pow((p1.y - p2.y), 2));
-    return sqr;
-  }
-
   void _fetchUsersAndMatchFace(BuildContext context) async {
     try {
       final users = await _database.rawQuery('SELECT * FROM users');
@@ -217,16 +176,17 @@ class _AuthenticateFaceViewManualState
 
         for (var user in users) {
           final userModel = UserModel.fromJson(user);
-          final similarity =
-              compareFaces(_faceFeatures!, userModel.faceFeatures!);
+          final similarity = FaceRegistrationUtil.compareFaces(
+              _faceFeatures!, userModel.faceFeatures!);
           if (similarity >= 0.8 && similarity <= 1.5) {
             filteredUsers.add(userModel);
           }
         }
 
         filteredUsers.sort((a, b) =>
-            compareFaces(_faceFeatures!, a.faceFeatures!)
-                .compareTo(compareFaces(_faceFeatures!, b.faceFeatures!)));
+            FaceRegistrationUtil.compareFaces(_faceFeatures!, a.faceFeatures!)
+                .compareTo(FaceRegistrationUtil.compareFaces(
+                    _faceFeatures!, b.faceFeatures!)));
 
         _matchFaces(context: context, users: filteredUsers);
       } else {
@@ -249,7 +209,8 @@ class _AuthenticateFaceViewManualState
 
     for (var user in users) {
       // Face comparing logic.
-      final similarity = compareFaces(_faceFeatures!, user.faceFeatures!);
+      final similarity =
+          FaceRegistrationUtil.compareFaces(_faceFeatures!, user.faceFeatures!);
 
       setState(() {
         _similarity = similarity.toStringAsFixed(2);
@@ -365,6 +326,11 @@ class _AuthenticateFaceViewManualState
         _matchFaces(context: context, users: userList);
       } else {
         setState(() => trialNumber = 1);
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const UserDetailsView(user: null),
+          ),
+        );
         _showFailureDialog(
           context,
           title: "User Not Found",

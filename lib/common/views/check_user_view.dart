@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:registration_and_verification_system/authenticate_face/user_details_view.dart';
-import 'package:registration_and_verification_system/model/user_model.dart';
+import 'package:registration_and_verification_system/model/user.dart';
 import 'package:sqflite/sqflite.dart';
 
 class CheckUserView extends StatefulWidget {
@@ -26,14 +26,14 @@ class _CheckUserViewState extends State<CheckUserView> {
       join(await getDatabasesPath(), 'user_database.db'),
       onCreate: (db, version) {
         return db.execute(
-          "CREATE TABLE users(id TEXT PRIMARY KEY, name TEXT, image TEXT, faceFeatures TEXT, registeredOn INTEGER)",
+          "CREATE TABLE users(id TEXT PRIMARY KEY, name TEXT, image TEXT, registeredOn INTEGER)",
         );
       },
       version: 1,
     );
   }
 
-  Future<UserModel?> _getUserById(String id) async {
+  Future<User?> _getUserById(String id) async {
     final List<Map<String, dynamic>> maps = await _database.query(
       'users',
       where: 'id = ?',
@@ -41,7 +41,7 @@ class _CheckUserViewState extends State<CheckUserView> {
     );
 
     if (maps.isNotEmpty) {
-      return UserModel.fromMap(maps.first);
+      return User.fromMap(maps.first);
     } else {
       return null;
     }
@@ -74,7 +74,7 @@ class _CheckUserViewState extends State<CheckUserView> {
             ElevatedButton(
               onPressed: () async {
                 if (_idController.text.isNotEmpty) {
-                  UserModel? user = await _getUserById(_idController.text);
+                  User? user = await _getUserById(_idController.text);
                   if (user != null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('User found: ${user.name}')),
@@ -87,6 +87,11 @@ class _CheckUserViewState extends State<CheckUserView> {
                       );
                     }
                   } else {
+                    Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const UserDetailsView(user: null),
+                        ),
+                      );
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('User not found.'),
