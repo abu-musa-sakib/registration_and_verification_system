@@ -102,7 +102,7 @@ class UserDetailsView extends StatelessWidget {
     Widget userImageWidget;
 
     if (user!.image.isNotEmpty) {
-      if (user.image.startsWith('data:image')) {
+      if (user.image.startsWith('/9j/')) {
         // Base64 encoded image
         userImageWidget = CircleAvatar(
           radius: 42,
@@ -110,7 +110,7 @@ class UserDetailsView extends StatelessWidget {
           child: CircleAvatar(
             radius: 40,
             backgroundImage:
-                MemoryImage(base64Decode(user.image.split(',')[1])),
+                MemoryImage(base64Decode(user.image)),
           ),
         );
       } else {
