@@ -16,7 +16,7 @@ import 'package:registration_and_verification_system/constants/theme.dart';
 import 'package:registration_and_verification_system/model/user_model.dart';
 import 'package:registration_and_verification_system/common/utils/extract_face_feature.dart';
 
-const double similarityThreshold = 0.80;
+const double similarityThreshold = 0.70;
 
 class AuthenticateFaceViewManual extends StatefulWidget {
   const AuthenticateFaceViewManual({super.key});
@@ -244,6 +244,11 @@ class _AuthenticateFaceViewManualState
     if (!faceMatched) {
       if (trialNumber == 4) {
         setState(() => trialNumber = 1);
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const UserDetailsView(user: null),
+          ),
+        );
         _showFailureDialog(
           context,
           title: "Redeem Failed",
@@ -257,6 +262,11 @@ class _AuthenticateFaceViewManualState
         _showNamePromptDialog(context);
       } else {
         setState(() => trialNumber++);
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const UserDetailsView(user: null),
+          ),
+        );
         _showFailureDialog(
           context,
           title: "Redeem Failed",
